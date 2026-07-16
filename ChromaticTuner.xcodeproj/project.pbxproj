@@ -1,0 +1,278 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* ChromaticTunerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* ChromaticTunerApp.swift */; };
+		A10000000000000000000002 /* TunerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* TunerView.swift */; };
+		A10000000000000000000003 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* SettingsView.swift */; };
+		A10000000000000000000004 /* TunerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* TunerEngine.swift */; };
+		A10000000000000000000005 /* TunerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* TunerSettings.swift */; };
+		A10000000000000000000006 /* PitchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* PitchDetector.swift */; };
+		A10000000000000000000007 /* Resources/StagBody-v2.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Resources/StagBody-v2.png */; };
+		A10000000000000000000008 /* Resources/StagMandible-v2.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Resources/StagMandible-v2.png */; };
+		A10000000000000000000009 /* Resources/StagGlow.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Resources/StagGlow.png */; };
+		A10000000000000000000010 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* PurchaseManager.swift */; };
+		A10000000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* ChromaticTunerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChromaticTunerApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* TunerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunerView.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* TunerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunerEngine.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* TunerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunerSettings.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* PitchDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitchDetector.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000008 /* StagTune.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StagTune.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000009 /* Resources/StagBody-v2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Resources/StagBody-v2.png"; sourceTree = "<group>"; };
+		A20000000000000000000010 /* Resources/StagMandible-v2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Resources/StagMandible-v2.png"; sourceTree = "<group>"; };
+		A20000000000000000000011 /* Resources/StagGlow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Resources/StagGlow.png; sourceTree = "<group>"; };
+		A20000000000000000000012 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000002 /* ChromaticTuner */,
+				A40000000000000000000003 /* Sources/TunerCore */,
+				A40000000000000000000004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000000000000000000002 /* ChromaticTuner */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* ChromaticTunerApp.swift */,
+				A20000000000000000000002 /* TunerView.swift */,
+				A20000000000000000000003 /* SettingsView.swift */,
+				A20000000000000000000004 /* TunerEngine.swift */,
+				A20000000000000000000005 /* TunerSettings.swift */,
+				A20000000000000000000007 /* Info.plist */,
+				A20000000000000000000009 /* Resources/StagBody-v2.png */,
+				A20000000000000000000010 /* Resources/StagMandible-v2.png */,
+				A20000000000000000000011 /* Resources/StagGlow.png */,
+				A20000000000000000000012 /* PurchaseManager.swift */,
+				A20000000000000000000013 /* Assets.xcassets */,
+			);
+			path = ChromaticTuner;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000003 /* Sources/TunerCore */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000006 /* PitchDetector.swift */,
+			);
+			path = Sources/TunerCore;
+			sourceTree = SOURCE_ROOT;
+		};
+		A40000000000000000000004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000008 /* StagTune.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* Chromatic */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A90000000000000000000002 /* Build configuration list for PBXNativeTarget "Chromatic" */;
+			buildPhases = (
+				A70000000000000000000001 /* Sources */,
+				A30000000000000000000001 /* Frameworks */,
+				A80000000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Chromatic;
+			productName = Chromatic;
+			productReference = A20000000000000000000008 /* StagTune.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A60000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A90000000000000000000001 /* Build configuration list for PBXProject "ChromaticTuner" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A40000000000000000000001;
+			productRefGroup = A40000000000000000000004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A50000000000000000000001 /* Chromatic */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A80000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000007 /* Resources/StagBody-v2.png in Resources */,
+				A10000000000000000000008 /* Resources/StagMandible-v2.png in Resources */,
+				A10000000000000000000009 /* Resources/StagGlow.png in Resources */,
+				A10000000000000000000011 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A70000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* ChromaticTunerApp.swift in Sources */,
+				A10000000000000000000002 /* TunerView.swift in Sources */,
+				A10000000000000000000003 /* SettingsView.swift in Sources */,
+				A10000000000000000000004 /* TunerEngine.swift in Sources */,
+				A10000000000000000000005 /* TunerSettings.swift in Sources */,
+				A10000000000000000000006 /* PitchDetector.swift in Sources */,
+				A10000000000000000000010 /* PurchaseManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B10000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		B10000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		B10000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 248266742A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChromaticTuner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spencer.stagtune;
+				PRODUCT_NAME = StagTune;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		B10000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 248266742A;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ChromaticTuner/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spencer.stagtune;
+				PRODUCT_NAME = StagTune;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A90000000000000000000001 /* Build configuration list for PBXProject "ChromaticTuner" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000001 /* Debug */,
+				B10000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A90000000000000000000002 /* Build configuration list for PBXNativeTarget "Chromatic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000003 /* Debug */,
+				B10000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A60000000000000000000001 /* Project object */;
+}

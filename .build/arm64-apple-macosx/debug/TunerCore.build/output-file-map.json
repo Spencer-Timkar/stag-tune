@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/primary.swiftdeps"
+  },
+  "/Users/spencer/Documents/Chromatic Tuner/Sources/TunerCore/PitchDetector.swift": {
+    "dependencies": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/PitchDetector.d",
+    "object": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/PitchDetector.swift.o",
+    "swiftmodule": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/PitchDetector~partial.swiftmodule",
+    "swift-dependencies": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/PitchDetector.swiftdeps",
+    "diagnostics": "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/PitchDetector.dia"
+  }
+}

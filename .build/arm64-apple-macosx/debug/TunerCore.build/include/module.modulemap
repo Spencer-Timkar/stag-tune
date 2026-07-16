@@ -1,0 +1,3 @@
+module TunerCore {
+    header "/Users/spencer/Documents/Chromatic Tuner/.build/arm64-apple-macosx/debug/TunerCore.build/include/TunerCore-Swift.h"
+}

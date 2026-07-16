@@ -1,0 +1,120 @@
+{
+  "source": "/Users/spencer/Documents/Chromatic Tuner/ChromaticTuner/TunerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Upgrade to Stag Pro",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "STAG",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 142
+        }
+      },
+      {
+        "comment": "",
+        "key": "TUNE",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 143
+        }
+      },
+      {
+        "comment": "",
+        "key": "PRO",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 153
+        }
+      },
+      {
+        "comment": "",
+        "key": "LISTENING",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "A = %lld HZ",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "OPEN SETTINGS",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 289
+        }
+      },
+      {
+        "comment": "",
+        "key": "MICROPHONE ACCESS NEEDED",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 278
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enable microphone access in Settings so Stag Tune can hear your instrument. Audio stays on this iPhone.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 282
+        }
+      },
+      {
+        "comment": "",
+        "key": "STAG PRO",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 330
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dismiss",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 344
+        }
+      },
+      {
+        "comment": "",
+        "key": "LOVE THE APP?",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 318
+        }
+      },
+      {
+        "comment": "",
+        "key": "Consider supporting Stag by upgrading to Stag Pro.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 322
+        }
+      }
+    ]
+  },
+  "version": 1
+}

@@ -1,0 +1,12 @@
+{
+  "/Users/spencer/Documents/Chromatic Tuner/ChromaticTuner/ChromaticTunerApp.swift" : {
+    "abi-baseline-json" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/StagTune.abi.json",
+    "const-values" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/Chromatic-primary.swiftconstvalues",
+    "dependencies" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/Chromatic-primary.d",
+    "diagnostics" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/Chromatic-primary.dia",
+    "objc-header" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/StagTune-Swift.h",
+    "swiftdoc" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/StagTune.swiftdoc",
+    "swiftmodule" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/StagTune.swiftmodule",
+    "swiftsourceinfo" : "/Users/spencer/Documents/Chromatic Tuner/.build/XcodeReleaseNoAssets/Build/Intermediates.noindex/ChromaticTuner.build/Release-iphonesimulator/Chromatic.build/Objects-normal/x86_64/StagTune.swiftsourceinfo"
+  }
+}
