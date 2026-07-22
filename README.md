@@ -1,5 +1,7 @@
 # Chromatic
 
+Contact spencer@timkar.com for support!
+
 A portrait-first chromatic tuner for iPhone. Pitch is analyzed entirely on-device and displayed as a smooth vertical trace: sharp rises, flat falls, and the target remains fixed at center.
 
 ## Current v1 prototype
