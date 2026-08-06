@@ -84,7 +84,7 @@ struct SettingsView: View {
                     NavigationLink {
                         PrivacyPolicyView()
                     } label: {
-                        Label("Privacy", systemImage: "hand.raised")
+                        Label("Privacy Policy", systemImage: "hand.raised")
                     }
 
                     LabeledContent("Version", value: versionLabel)
@@ -176,6 +176,8 @@ struct SettingsView: View {
 }
 
 private struct PrivacyPolicyView: View {
+    private let onlinePolicyURL = URL(string: "https://spencer-timkar.github.io/stag-tune/privacy.html")!
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
@@ -196,7 +198,15 @@ private struct PrivacyPolicyView: View {
                     "Your tuner preferences are stored locally on this iPhone. Deleting the app removes those locally stored preferences."
                 )
 
-                Text("Last updated July 13, 2026")
+                Link(destination: onlinePolicyURL) {
+                    Label("VIEW FULL POLICY ONLINE", systemImage: "arrow.up.right.square")
+                        .font(.caption.weight(.bold))
+                        .tracking(1.2)
+                        .foregroundStyle(Color.beetlePurple)
+                }
+                .accessibilityHint("Opens the Stag Tune privacy policy in your browser")
+
+                Text("Last updated August 6, 2026")
                     .font(.caption)
                     .foregroundStyle(Color.beetleIvory.opacity(0.48))
             }

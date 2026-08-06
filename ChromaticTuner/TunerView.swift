@@ -224,7 +224,7 @@ struct TunerView: View {
     }
 
     private var statusColor: Color {
-        guard let cents = engine.cents else { return .secondary }
+        guard engine.cents != nil else { return .secondary }
         return engine.isTuned ? .beetlePurple : .beetleIvory.opacity(0.72)
     }
 
