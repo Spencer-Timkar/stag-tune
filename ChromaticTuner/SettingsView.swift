@@ -294,7 +294,7 @@ struct StagProView: View {
                                 if purchases.isPurchasing {
                                     ProgressView().tint(Color.beetleIvory)
                                 }
-                                Text("UNLOCK FOREVER — \(purchases.displayPrice)")
+                                Text(purchaseButtonTitle)
                                     .font(.system(size: 14, weight: .bold))
                                     .tracking(1)
                             }
@@ -304,6 +304,14 @@ struct StagProView: View {
                             .background(Color.beetlePurple, in: RoundedRectangle(cornerRadius: 14))
                         }
                         .disabled(purchases.isPurchasing)
+
+                        if purchases.productLoadComplete && !purchases.isProAvailable {
+                            Button("Retry App Store Connection") {
+                                Task { await purchases.refreshStoreState() }
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.beetlePurple)
+                        }
 
                         Button("Not now") { dismiss() }
                             .font(.subheadline)
@@ -330,6 +338,16 @@ struct StagProView: View {
         .onChange(of: purchases.isPro) { _, isPro in
             if isPro { dismiss() }
         }
+        .task {
+            await purchases.refreshStoreState()
+        }
+    }
+
+    private var purchaseButtonTitle: String {
+        if let price = purchases.displayPrice {
+            return "UNLOCK FOREVER — \(price)"
+        }
+        return purchases.isLoadingProducts ? "CONNECTING TO APP STORE…" : "CHECK AVAILABILITY"
     }
 
     private func benefit(_ text: String) -> some View {

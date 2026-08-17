@@ -112,6 +112,7 @@ struct TunerView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 engine.start()
+                Task { await purchases.refreshStoreState() }
             }
         }
         .sheet(isPresented: $showingSettings) {
