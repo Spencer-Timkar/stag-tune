@@ -3,7 +3,8 @@ import SwiftUI
 
 @MainActor
 final class PurchaseManager: ObservableObject {
-    static let proProductID = "com.spencer.stagtune.stagpro"
+    // Must exactly match the immutable Product ID in App Store Connect.
+    static let proProductID = "stagpro"
 
     @Published private(set) var proProduct: Product?
     @Published private(set) var isPro = false
