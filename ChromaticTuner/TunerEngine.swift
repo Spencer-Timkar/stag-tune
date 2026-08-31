@@ -28,7 +28,7 @@ private struct AudioAnalysisFrame: Sendable {
 
 private final class PitchAnalysisPipeline: @unchecked Sendable {
     private let lock = NSLock()
-    private let detector = PitchDetector(silenceThreshold: 0.00096)
+    private let detector = PitchDetector(silenceThreshold: 0.00075)
     private var refiner = PhasePitchRefiner()
 
     func analyze(frame: AudioAnalysisFrame, sampleRate: Double) -> PitchObservation? {
@@ -289,8 +289,8 @@ final class TunerEngine: ObservableObject {
 
     
     private func consume(_ observation: PitchObservation?, windowRMS: Double) {
-        let acquisitionConfidence = 0.47
-        let releaseConfidence = 0.32
+        let acquisitionConfidence = 0.43
+        let releaseConfidence = 0.28
         let releaseDuration = 1.25
         let now = Date()
         let rawMIDINote = observation.map {
@@ -319,13 +319,13 @@ final class TunerEngine: ObservableObject {
 
         guard let observation, let rawMIDINote else { return }
         if isContinuingTrackedNote {
-            let releaseThreshold = max(0.00096, (learnedNoiseFloor ?? 0) * 0.84)
+            let releaseThreshold = max(0.00075, (learnedNoiseFloor ?? 0) * 0.84)
             guard observation.confidence >= releaseConfidence,
-                  observation.confidence >= 0.62 || observation.amplitude >= releaseThreshold else { return }
+                  observation.confidence >= 0.58 || observation.amplitude >= releaseThreshold else { return }
         } else {
-            let acquisitionThreshold = max(0.0012, learnedNoiseFloor ?? 0)
+            let acquisitionThreshold = max(0.00095, learnedNoiseFloor ?? 0)
             guard observation.confidence >= acquisitionConfidence,
-                  observation.confidence >= 0.70 || observation.amplitude >= acquisitionThreshold else { return }
+                  observation.confidence >= 0.66 || observation.amplitude >= acquisitionThreshold else { return }
         }
         guard let confirmedMIDINote = confirmedJump(rawMIDINote) else { return }
 
