@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+# Xcode & Swift Build Artifacts
+build/
+DerivedData/
+.build/
+# Xcode User Data (Breakpoints, Window Layouts, User-specific schemes)
+xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+*.xcbkptlist
+# Swift Package Manager User Data
+.swiftpm/xcode/
+.swiftpm/configuration/
+# Fastlane / Bundler (if added later)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
