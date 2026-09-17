@@ -14,6 +14,7 @@ struct TunerView: View {
     @State private var showingSupportPrompt = false
     @State private var showingLaunchPro = false
     @State private var hasPresentedSupportPrompt = false
+    @State private var microphoneNoticeDismissed = false
 
     private var configuration: TunerConfiguration {
         TunerConfiguration(
@@ -55,18 +56,17 @@ struct TunerView: View {
                 header
                 statusReadout
                 Spacer(minLength: 0)
+                if engine.microphoneDenied && !microphoneNoticeDismissed {
+                    MicrophoneAccessCard(openSettings: {
+                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        UIApplication.shared.open(url)
+                    }, dismiss: { microphoneNoticeDismissed = true })
+                    .padding(.bottom, 16)
+                }
                 footer
             }
 
-            if engine.microphoneDenied {
-                MicrophoneAccessCard {
-                    guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(settingsURL)
-                }
-                .zIndex(20)
-            }
-
-            if showingSupportPrompt {
+            if showingSupportPrompt && engine.microphonePermissionResolved && !engine.microphoneDenied {
                 LaunchProPrompt(
                     openPro: {
                         withAnimation(.easeOut(duration: 0.18)) {
@@ -87,7 +87,7 @@ struct TunerView: View {
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
             engine.update(configuration: configuration)
-            engine.start()
+            if scenePhase == .active { engine.start() }
             scheduleSupportPromptIfNeeded()
         }
         .onDisappear {
@@ -99,6 +99,9 @@ struct TunerView: View {
         .onChange(of: accidentalPreference) { _, _ in engine.update(configuration: configuration) }
         .onChange(of: hapticsEnabled) { _, _ in engine.update(configuration: configuration) }
         .onChange(of: reverseDirection) { _, _ in engine.update(configuration: configuration) }
+        .onChange(of: engine.microphonePermissionResolved) { _, resolved in
+            if resolved { scheduleSupportPromptIfNeeded() }
+        }
         .onChange(of: purchases.entitlementCheckComplete) { _, complete in
             if complete {
                 enforceFreeDefaultsIfNeeded()
@@ -192,6 +195,9 @@ struct TunerView: View {
         .padding(.horizontal, 24)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityReading)
+        .onTapGesture {
+            if engine.microphoneDenied { microphoneNoticeDismissed = false }
+        }
     }
 
     private var footer: some View {
@@ -241,6 +247,8 @@ struct TunerView: View {
 
     private func enforceFreeDefaultsIfNeeded() {
         guard purchases.entitlementCheckComplete,
+              engine.microphonePermissionResolved,
+              !engine.microphoneDenied,
               !purchases.isPro else { return }
         referencePitch = 440
         tolerance = 10
@@ -266,6 +274,7 @@ struct TunerView: View {
 
 private struct MicrophoneAccessCard: View {
     let openSettings: () -> Void
+    let dismiss: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
@@ -274,24 +283,26 @@ private struct MicrophoneAccessCard: View {
                 .foregroundStyle(Color.beetlePurple)
 
             VStack(spacing: 7) {
-                Text("MICROPHONE ACCESS NEEDED")
+                Text("MICROPHONE IS OFF")
                     .font(.system(size: 12, weight: .bold))
                     .tracking(1.5)
                     .foregroundStyle(Color.beetleIvory)
-                Text("Enable microphone access in Settings so Stag Tune can hear your instrument. Audio stays on this iPhone.")
+                Text("Enable microphone access to tune your instrument. Audio stays on this device.")
                     .font(.footnote)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.beetleIvory.opacity(0.68))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            Button("OPEN SETTINGS", action: openSettings)
-                .font(.system(size: 12, weight: .bold))
-                .tracking(1.1)
-                .foregroundStyle(Color.beetleIvory)
-                .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(Color.beetlePurple, in: RoundedRectangle(cornerRadius: 13))
+            HStack {
+                Button("Not now", action: dismiss)
+                    .foregroundStyle(Color.beetleIvory.opacity(0.7))
+                Spacer()
+                Button("Open Settings", action: openSettings)
+                    .foregroundStyle(Color.beetlePurple)
+            }
+            .font(.footnote.weight(.semibold))
+            .frame(minHeight: 44)
         }
         .padding(22)
         .frame(maxWidth: 320)

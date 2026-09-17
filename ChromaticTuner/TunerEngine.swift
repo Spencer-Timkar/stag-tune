@@ -122,6 +122,7 @@ final class TunerEngine: ObservableObject {
     var confidence: Double { snapshot.confidence }
     var status: String { snapshot.status }
     var microphoneDenied: Bool { snapshot.microphoneDenied }
+    @Published private(set) var microphonePermissionResolved = false
     var isTuned: Bool { snapshot.isTuned }
 
     var configuration = TunerConfiguration()
@@ -172,6 +173,20 @@ final class TunerEngine: ObservableObject {
     func start() {
         shouldBeRunning = true
         guard !isStarting, !audioEngine.isRunning else { return }
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted:
+            microphonePermissionResolved = true
+            configureAndStartAudio()
+            return
+        case .denied:
+            snapshot = TunerSnapshot(status: "Microphone is off", microphoneDenied: true)
+            microphonePermissionResolved = true
+            return
+        case .undetermined:
+            microphonePermissionResolved = false
+        @unknown default:
+            return
+        }
         isStarting = true
         AVAudioApplication.requestRecordPermission { [weak self] granted in
             Task { @MainActor in
@@ -181,10 +196,11 @@ final class TunerEngine: ObservableObject {
                 if granted { self.configureAndStartAudio() }
                 else {
                     self.snapshot = TunerSnapshot(
-                        status: "Microphone access is required",
+                        status: "Microphone is off",
                         microphoneDenied: true
                     )
                 }
+                self.microphonePermissionResolved = true
             }
         }
     }
@@ -439,7 +455,7 @@ final class TunerEngine: ObservableObject {
 
     private func clearReading() {
         snapshot = TunerSnapshot(
-            status: microphoneDenied ? "Microphone access is required" : "Play a note",
+            status: microphoneDenied ? "Microphone is off" : "Play a note",
             microphoneDenied: microphoneDenied
         )
         smoothedMIDINote = nil
