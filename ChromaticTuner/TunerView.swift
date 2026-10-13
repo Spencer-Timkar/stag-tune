@@ -3,7 +3,7 @@ import UIKit
 
 struct TunerView: View {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var engine = TunerEngine()
+    @State private var engine = TunerEngine()
     @StateObject private var purchases = PurchaseManager()
     @AppStorage("referencePitch") private var referencePitch = 440.0
     @AppStorage("tolerance") private var tolerance = 10.0
@@ -44,17 +44,27 @@ struct TunerView: View {
             .ignoresSafeArea()
 
             PitchWheelView(
-                midiNote: engine.midiNote,
-                cents: engine.cents,
-                isTuned: engine.isTuned,
+                engine: engine,
                 accidentalPreference: activeAccidentalPreference,
                 reverseDirection: activeReverseDirection
             )
             .ignoresSafeArea(.container, edges: .vertical)
 
             VStack(spacing: 0) {
-                header
-                statusReadout
+                TunerHeaderBar(
+                    engine: engine,
+                    isPro: purchases.isPro,
+                    openSettings: { showingSettings = true },
+                    openPro: {
+                        showingSupportPrompt = false
+                        showingLaunchPro = true
+                    }
+                )
+                StatusReadout(
+                    engine: engine,
+                    accidentalPreference: activeAccidentalPreference,
+                    revealMicrophoneNotice: { microphoneNoticeDismissed = false }
+                )
                 Spacer(minLength: 0)
                 if engine.microphoneDenied && !microphoneNoticeDismissed {
                     MicrophoneAccessCard(openSettings: {
@@ -63,7 +73,7 @@ struct TunerView: View {
                     }, dismiss: { microphoneNoticeDismissed = true })
                     .padding(.bottom, 16)
                 }
-                footer
+                TunerFooter(engine: engine, referencePitch: activeReferencePitch)
             }
 
             if showingSupportPrompt && engine.microphonePermissionResolved && !engine.microphoneDenied {
@@ -135,116 +145,6 @@ struct TunerView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            HStack(spacing: 10) {
-                StagLogoMark(color: isTuned ? Color.beetlePurple : Color.beetleIvory.opacity(0.5))
-                    .frame(width: 25, height: 29)
-                    .shadow(color: isTuned ? Color.beetlePurple.opacity(0.9) : .clear, radius: 8)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("STAG").font(.system(size: 9, weight: .bold)).tracking(3)
-                    Text("TUNE").font(.caption2.weight(.medium)).tracking(2.1)
-                }
-                .foregroundStyle(Color.beetleIvory.opacity(0.65))
-            }
-            Spacer()
-            if !purchases.isPro {
-                Button {
-                    showingSupportPrompt = false
-                    showingLaunchPro = true
-                } label: {
-                    Text("PRO")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(1.4)
-                        .foregroundStyle(Color.beetlePurple)
-                        .padding(.horizontal, 12)
-                        .frame(height: 32)
-                        .background(Color.beetlePurple.opacity(0.1), in: Capsule())
-                        .overlay(Capsule().stroke(Color.beetlePurple.opacity(0.4), lineWidth: 1))
-                }
-                .accessibilityLabel("Upgrade to Stag Pro")
-                .padding(.trailing, 8)
-            }
-            Button { showingSettings = true } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 19, weight: .medium))
-                    .frame(width: 44, height: 44)
-                    .foregroundStyle(Color.beetleIvory.opacity(0.72))
-                    .background(Color.beetleBlack.opacity(0.5), in: Circle())
-                    .overlay(Circle().stroke(Color.beetleIvory.opacity(0.14)))
-            }
-            .accessibilityLabel("Settings")
-        }
-        .padding(.horizontal, 22)
-        .padding(.top, 8)
-    }
-
-    private var statusReadout: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(engine.status.uppercased())
-                .font(.system(size: 10, weight: .semibold, design: .default))
-                .tracking(2)
-                .foregroundStyle(statusColor.opacity(0.9))
-            Spacer()
-            Text(centsLabel)
-                .font(.system(size: 17, weight: .medium, design: .monospaced))
-                .foregroundStyle(statusColor)
-                .contentTransition(.numericText())
-        }
-        .frame(height: 30)
-        .padding(.horizontal, 24)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityReading)
-        .onTapGesture {
-            if engine.microphoneDenied { microphoneNoticeDismissed = false }
-        }
-    }
-
-    private var footer: some View {
-        HStack {
-            HStack(spacing: 7) {
-                Image(systemName: "tuningfork")
-                    .font(.system(size: 11, weight: .medium))
-                Text("A = \(Int(activeReferencePitch)) HZ")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-            }
-            Spacer()
-            if let frequency = engine.frequency {
-                Text(String(format: "%.1f HZ", frequency))
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-            } else {
-                Text("LISTENING")
-                    .font(.system(size: 10, weight: .medium, design: .default))
-                    .tracking(1.6)
-            }
-        }
-        .foregroundStyle(Color.beetleIvory.opacity(0.5))
-        .padding(.horizontal, 16)
-        .frame(height: 42)
-        .padding(.horizontal, 18)
-        .padding(.bottom, 7)
-    }
-
-    private var centsLabel: String {
-        guard let cents = engine.cents else { return "— ¢" }
-        return String(format: "%+.1f ¢", cents)
-    }
-
-    private var statusColor: Color {
-        guard engine.cents != nil else { return .secondary }
-        return engine.isTuned ? .beetlePurple : .beetleIvory.opacity(0.72)
-    }
-
-    private var isTuned: Bool {
-        engine.isTuned
-    }
-
-    private var accessibilityReading: String {
-        guard let midi = engine.midiNote, let cents = engine.cents else { return engine.status }
-        let direction = engine.isTuned ? "in tune" : (cents > 0 ? "sharp" : "flat")
-        return "\(noteName(for: midi, preference: configuration.accidentalPreference)), \(String(format: "%.1f", abs(cents))) cents \(direction)"
-    }
-
     private func enforceFreeDefaultsIfNeeded() {
         guard purchases.entitlementCheckComplete,
               engine.microphonePermissionResolved,
@@ -269,6 +169,130 @@ struct TunerView: View {
                 showingSupportPrompt = true
             }
         }
+    }
+}
+
+/// The header, status line, and footer read the engine themselves, so a new pitch
+/// reading only invalidates the parts of the screen that show it.
+private struct TunerHeaderBar: View {
+    let engine: TunerEngine
+    let isPro: Bool
+    let openSettings: () -> Void
+    let openPro: () -> Void
+
+    var body: some View {
+        let isTuned = engine.isTuned
+        HStack {
+            HStack(spacing: 10) {
+                StagLogoMark(color: isTuned ? Color.beetlePurple : Color.beetleIvory.opacity(0.5))
+                    .frame(width: 25, height: 29)
+                    .shadow(color: isTuned ? Color.beetlePurple.opacity(0.9) : .clear, radius: 8)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("STAG").font(.system(size: 9, weight: .bold)).tracking(3)
+                    Text("TUNE").font(.caption2.weight(.medium)).tracking(2.1)
+                }
+                .foregroundStyle(Color.beetleIvory.opacity(0.65))
+            }
+            Spacer()
+            if !isPro {
+                Button(action: openPro) {
+                    Text("PRO")
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(1.4)
+                        .foregroundStyle(Color.beetlePurple)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(Color.beetlePurple.opacity(0.1), in: Capsule())
+                        .overlay(Capsule().stroke(Color.beetlePurple.opacity(0.4), lineWidth: 1))
+                }
+                .accessibilityLabel("Upgrade to Stag Pro")
+                .padding(.trailing, 8)
+            }
+            Button(action: openSettings) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 19, weight: .medium))
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(Color.beetleIvory.opacity(0.72))
+                    .background(Color.beetleBlack.opacity(0.5), in: Circle())
+                    .overlay(Circle().stroke(Color.beetleIvory.opacity(0.14)))
+            }
+            .accessibilityLabel("Settings")
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 8)
+    }
+}
+
+private struct StatusReadout: View {
+    let engine: TunerEngine
+    let accidentalPreference: AccidentalPreference
+    let revealMicrophoneNotice: () -> Void
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(engine.status.uppercased())
+                .font(.system(size: 10, weight: .semibold, design: .default))
+                .tracking(2)
+                .foregroundStyle(statusColor.opacity(0.9))
+            Spacer()
+            Text(centsLabel)
+                .font(.system(size: 17, weight: .medium, design: .monospaced))
+                .foregroundStyle(statusColor)
+                .contentTransition(.numericText())
+        }
+        .frame(height: 30)
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityReading)
+        .onTapGesture {
+            if engine.microphoneDenied { revealMicrophoneNotice() }
+        }
+    }
+
+    private var centsLabel: String {
+        guard let cents = engine.cents else { return "— ¢" }
+        return String(format: "%+.1f ¢", cents)
+    }
+
+    private var statusColor: Color {
+        guard engine.cents != nil else { return .secondary }
+        return engine.isTuned ? .beetlePurple : .beetleIvory.opacity(0.72)
+    }
+
+    private var accessibilityReading: String {
+        guard let midi = engine.midiNote, let cents = engine.cents else { return engine.status }
+        let direction = engine.isTuned ? "in tune" : (cents > 0 ? "sharp" : "flat")
+        return "\(NoteNaming.name(for: midi, preference: accidentalPreference)), \(String(format: "%.1f", abs(cents))) cents \(direction)"
+    }
+}
+
+private struct TunerFooter: View {
+    let engine: TunerEngine
+    let referencePitch: Double
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 7) {
+                Image(systemName: "tuningfork")
+                    .font(.system(size: 11, weight: .medium))
+                Text("A = \(Int(referencePitch)) HZ")
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+            }
+            Spacer()
+            if let frequency = engine.frequency {
+                Text(String(format: "%.1f HZ", frequency))
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+            } else {
+                Text("LISTENING")
+                    .font(.system(size: 10, weight: .medium, design: .default))
+                    .tracking(1.6)
+            }
+        }
+        .foregroundStyle(Color.beetleIvory.opacity(0.5))
+        .padding(.horizontal, 16)
+        .frame(height: 42)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 7)
     }
 }
 
@@ -389,16 +413,18 @@ private struct LaunchProPrompt: View {
 }
 
 private struct PitchWheelView: View {
-    let midiNote: Int?
-    let cents: Double?
-    let isTuned: Bool
+    let engine: TunerEngine
     let accidentalPreference: AccidentalPreference
     let reverseDirection: Bool
     @State private var displayedPitchPosition = 69.0
 
-    private var pitchPosition: Double { Double(midiNote ?? 69) + (cents ?? 0) / 100 }
+    private var pitchPosition: Double {
+        Double(engine.midiNote ?? 69) + (engine.cents ?? 0) / 100
+    }
 
     var body: some View {
+        let cents = engine.cents
+        let isTuned = engine.isTuned
         GeometryReader { geometry in
             let size = geometry.size
             let centerY = size.height / 2
@@ -415,7 +441,7 @@ private struct PitchWheelView: View {
                     let isNearest = note == nearest
 
                     NoteRow(
-                        name: noteName(for: note, preference: accidentalPreference),
+                        name: NoteNaming.name(for: note, preference: accidentalPreference),
                         active: isNearest,
                         tuned: isNearest && isTuned
                     )
@@ -425,7 +451,7 @@ private struct PitchWheelView: View {
 
                 // The photographic beetle sits above the complete note layer.
                 BottomStagGuide(cents: cents, tuned: isTuned)
-                centerGuide(size: size)
+                centerGuide(size: size, cents: cents, tuned: isTuned)
             }
         }
         .onAppear {
@@ -450,8 +476,8 @@ private struct PitchWheelView: View {
         .accessibilityHidden(true)
     }
 
-    private func centerGuide(size: CGSize) -> some View {
-        PrecisionMeter(cents: cents, tuned: isTuned)
+    private func centerGuide(size: CGSize, cents: Double?, tuned: Bool) -> some View {
+        PrecisionMeter(cents: cents, tuned: tuned)
         .frame(width: size.width - 56, height: 20)
         .position(x: size.width / 2, y: size.height / 2)
     }
@@ -641,11 +667,4 @@ extension Color {
     static let beetleBlack = Color(red: 0.025, green: 0.03, blue: 0.028)
     static let beetleIvory = Color(red: 0.92, green: 0.91, blue: 0.85)
     static let beetlePurple = Color(red: 0.68, green: 0.35, blue: 0.96)
-}
-
-private func noteName(for midi: Int, preference: AccidentalPreference) -> String {
-    let sharpNames = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"]
-    let flatNames = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"]
-    let index = (midi % 12 + 12) % 12
-    return preference == .flats ? flatNames[index] : sharpNames[index]
 }

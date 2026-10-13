@@ -142,7 +142,21 @@ public struct PitchDetector: Sendable {
         let effectiveSampleRate = sampleRate / Double(factor)
         let mean = samples.reduce(0.0) { $0 + Double($1) } / Double(samples.count)
         samples = samples.map { Float(Double($0) - mean) }
+        // Pre-emphasis reduces fan/handling rumble relative to string partials.
+        // Keep RMS on the unweighted signal so quiet-note sensitivity is unchanged.
+        // A gentle low-pass limits the extra weight given to pick transients and
+        // sharp upper partials. Both coefficients follow the actual sample rate.
         let rms = sqrt(samples.reduce(0.0) { $0 + Double($1 * $1) } / Double(samples.count))
+        let original = samples
+        let emphasis = Float(exp(-2 * Double.pi * 80 / effectiveSampleRate))
+        let lowPass = Float(exp(-2 * Double.pi * 1_200 / effectiveSampleRate))
+        var filtered = (1 - emphasis) * original[0]
+        samples[0] = filtered
+        for index in 1..<samples.count {
+            let emphasized = original[index] - emphasis * original[index - 1]
+            filtered = lowPass * filtered + (1 - lowPass) * emphasized
+            samples[index] = filtered
+        }
         guard rms >= silenceThreshold else { return nil }
 
         let minimumLag = max(2, Int(effectiveSampleRate / maximumFrequency))
@@ -150,9 +164,11 @@ public struct PitchDetector: Sendable {
         guard maximumLag > minimumLag else { return nil }
 
         var difference = [Double](repeating: 0, count: maximumLag + 1)
-        for lag in minimumLag...maximumLag {
+        // Every lag contributes to cumulative normalization. Use equal-sized
+        // comparisons so longer periods do not win merely by comparing less audio.
+        for lag in 1...maximumLag {
             var sum = 0.0
-            let limit = samples.count - lag
+            let limit = samples.count - maximumLag
             for index in 0..<limit {
                 let delta = Double(samples[index] - samples[index + lag])
                 sum += delta * delta
@@ -227,6 +243,195 @@ public struct PitchDetector: Sendable {
             frequency: frequency,
             confidence: max(0, min(1, 1 - normalized[lag])),
             amplitude: rms
+        )
+    }
+}
+
+/// Confirms acquisition and note changes over elapsed observation time. Missing or
+/// rejected frames break confirmation, so scattered false notes cannot add up
+/// to a switch. Small tuning movements pass through without a confirmation delay.
+public struct PitchContinuityFilter: Sendable {
+    private var candidate: Double?
+    private var candidateSince = 0.0
+    private var lastTime: Double?
+    private var count = 0
+
+    public init() {}
+
+    public mutating func reset() {
+        candidate = nil
+        lastTime = nil
+        count = 0
+    }
+
+    public mutating func accept(
+        midiNote: Double?, trackedNote: Double?, confidence: Double, time: Double
+    ) -> Bool {
+        guard let midiNote, midiNote.isFinite, time.isFinite, confidence >= 0.55 else {
+            reset()
+            return false
+        }
+        let distance = trackedNote.map { abs(midiNote - $0) }
+        if let distance, distance <= 0.75 {
+            reset()
+            return true
+        }
+        guard confidence >= 0.60 else { reset(); return false }
+        // A tap's requested buffer size is only a hint. Batched device delivery
+        // and debug builds can exceed 100 ms without a missing observation.
+        if let candidate, let lastTime,
+           time >= lastTime, time - lastTime <= 0.5,
+           abs(midiNote - candidate) <= 0.35 {
+            count += 1
+        } else {
+            candidate = midiNote
+            candidateSince = time
+            count = 1
+        }
+        lastTime = time
+        let duration = distance.map { $0 > 7.5 ? 0.18 : 0.10 } ?? 0.04
+        guard count >= 3, time - candidateSince >= duration else { return false }
+        reset()
+        return true
+    }
+}
+
+
+/// Shared live/replay tracking, including the idle timer. An empty display has
+/// nothing to expire: timer ticks must never erase a pending first note.
+public struct PitchTracker: Sendable {
+    public private(set) var smoothedMIDINote: Double?
+    /// The frequency the smoothed note represents. Kept so a change of reference
+    /// pitch can re-express a held reading instead of dropping it.
+    private var smoothedFrequency: Double?
+    private var recentRawNotes: [Double] = []
+    private var continuityFilter = PitchContinuityFilter()
+    private var learnedNoiseFloor: Double?
+    private var lastObservation: Double?
+
+    public init() {}
+
+    public mutating func reset() {
+        self = PitchTracker()
+    }
+
+    /// Re-expresses a held reading under a new reference pitch. Changing the
+    /// reference does not change the note being played, so the reading must
+    /// survive it: only the MIDI number the frequency maps to moves. Raw
+    /// observations and any pending confirmation are dropped because they are
+    /// expressed against the old reference.
+    public mutating func retune(referencePitch: Double) {
+        guard let smoothedFrequency, referencePitch.isFinite, referencePitch > 0 else { return }
+        smoothedMIDINote = 69 + 12 * log2(smoothedFrequency / referencePitch)
+        recentRawNotes.removeAll(keepingCapacity: true)
+        continuityFilter.reset()
+    }
+
+    @discardableResult
+    public mutating func expire(at time: Double) -> Bool {
+        guard let lastObservation, time.isFinite,
+              time - lastObservation > 1.25 else { return false }
+        smoothedMIDINote = nil
+        smoothedFrequency = nil
+        recentRawNotes.removeAll(keepingCapacity: true)
+        continuityFilter.reset()
+        self.lastObservation = nil
+        return true
+    }
+
+    public mutating func consume(
+        _ observation: PitchObservation?, windowRMS: Double,
+        time: Double, referencePitch: Double = 440
+    ) -> PitchObservation? {
+        let acquisitionConfidence = 0.60
+        let releaseConfidence = 0.55
+        let releaseDuration = 1.25
+        guard time.isFinite, referencePitch.isFinite, referencePitch > 0,
+              windowRMS.isFinite, windowRMS >= 0 else { return nil }
+        _ = expire(at: time)
+        let rawMIDINote = observation.flatMap { value -> Double? in
+            guard value.frequency.isFinite, value.frequency > 0,
+                  value.confidence.isFinite, value.amplitude.isFinite else { return nil }
+            return 69 + 12 * log2(value.frequency / referencePitch)
+        }
+        let isContinuingTrackedNote: Bool
+        if let trackedNote = smoothedMIDINote,
+           let rawMIDINote,
+           lastObservation.map({ time - $0 <= releaseDuration }) == true {
+            isContinuingTrackedNote = abs(rawMIDINote - trackedNote) <= 1.25
+        } else {
+            isContinuingTrackedNote = false
+        }
+
+        // Learn the room level only from frames that do not resemble a stable
+        // musical pitch. Strong, highly periodic notes can always pass the gate,
+        // which keeps quiet instruments responsive.
+        if !isContinuingTrackedNote,
+           observation == nil || (observation?.confidence ?? 0) <= acquisitionConfidence {
+            if let learnedNoiseFloor {
+                self.learnedNoiseFloor = learnedNoiseFloor * 0.94 + windowRMS * 0.06
+            } else {
+                learnedNoiseFloor = windowRMS
+            }
+        }
+
+        guard let observation, let rawMIDINote else {
+            continuityFilter.reset()
+            return nil
+        }
+        if isContinuingTrackedNote {
+            let releaseThreshold = max(0.00075, (learnedNoiseFloor ?? 0) * 0.84)
+            guard observation.confidence >= releaseConfidence,
+                  observation.confidence >= 0.58 || observation.amplitude >= releaseThreshold else {
+                continuityFilter.reset()
+                return nil
+            }
+        } else {
+            let acquisitionThreshold = max(0.00095, learnedNoiseFloor ?? 0)
+            guard observation.confidence >= acquisitionConfidence,
+                  observation.confidence >= 0.66 || observation.amplitude >= acquisitionThreshold else {
+                continuityFilter.reset()
+                return nil
+            }
+        }
+        guard continuityFilter.accept(
+            midiNote: rawMIDINote,
+            trackedNote: smoothedMIDINote,
+            confidence: observation.confidence,
+            time: time
+        ) else { return nil }
+        if let previous = smoothedMIDINote, abs(rawMIDINote - previous) > 0.75 {
+            recentRawNotes.removeAll(keepingCapacity: true)
+        }
+        recentRawNotes.append(rawMIDINote)
+        if recentRawNotes.count > 5 { recentRawNotes.removeFirst() }
+        let filterDepth = observation.confidence >= 0.78 ? 3 : 5
+        let filterWindow = recentRawNotes.suffix(filterDepth).sorted()
+        let filteredMIDINote = filterWindow[filterWindow.count / 2]
+
+        // Median filtering rejects single-frame harmonic errors; adaptive smoothing
+        // settles quiet jitter without making genuine movement feel sluggish.
+        if let previous = smoothedMIDINote, abs(filteredMIDINote - previous) < 1.25 {
+            let distance = abs(filteredMIDINote - previous)
+            let response: Double
+            if distance > 0.12 {
+                response = observation.confidence >= 0.78 ? 0.46 : 0.34
+            } else {
+                response = observation.confidence >= 0.78 ? 0.22 : 0.16
+            }
+            smoothedMIDINote = previous + response * (filteredMIDINote - previous)
+        } else {
+            smoothedMIDINote = filteredMIDINote
+        }
+        guard let smoothedMIDINote else { return nil }
+
+        lastObservation = time
+        let frequency = referencePitch * pow(2, (smoothedMIDINote - 69) / 12)
+        smoothedFrequency = frequency
+        return PitchObservation(
+            frequency: frequency,
+            confidence: observation.confidence,
+            amplitude: observation.amplitude
         )
     }
 }

@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import Observation
 import UIKit
 
 private final class AnalysisGate: @unchecked Sendable {
@@ -30,10 +31,20 @@ private final class PitchAnalysisPipeline: @unchecked Sendable {
     private let lock = NSLock()
     private let detector = PitchDetector(silenceThreshold: 0.00075)
     private var refiner = PhasePitchRefiner()
+    #if DEBUG
+    private var diagnosticFrameCount = 0
+    private let diagnosticsEnabled = ProcessInfo.processInfo.environment["TUNER_DIAGNOSTICS"] == "1"
+    #endif
 
     func analyze(frame: AudioAnalysisFrame, sampleRate: Double) -> PitchObservation? {
         lock.lock()
         defer { lock.unlock() }
+        #if DEBUG
+        if diagnosticsEnabled, diagnosticFrameCount < 12 {
+            print("Tuner input: rate=\(sampleRate) advance=\(frame.advanceSamples) window=\(frame.samples.count)")
+            diagnosticFrameCount += 1
+        }
+        #endif
         guard let observation = detector.detect(samples: frame.samples, sampleRate: sampleRate) else {
             refiner.reset()
             return nil
@@ -102,51 +113,48 @@ private final class OverlappingAudioWindow: @unchecked Sendable {
     }
 }
 
-private struct TunerSnapshot {
-    var frequency: Double? = nil
-    var cents: Double? = nil
-    var midiNote: Int? = nil
-    var confidence = 0.0
-    var status = "Play a note"
-    var microphoneDenied = false
-    var isTuned = false
-}
-
+/// The displayed reading. Each property is observed on its own, so a new pitch
+/// only invalidates the views that read it — the pitch wheel, the meter, and the
+/// readouts — instead of the entire screen at the hop rate.
+@Observable
 @MainActor
-final class TunerEngine: ObservableObject {
-    @Published private var snapshot = TunerSnapshot()
+final class TunerEngine {
+    private(set) var frequency: Double?
+    private(set) var cents: Double?
+    private(set) var midiNote: Int?
+    private(set) var confidence = 0.0
+    private(set) var status = "Play a note"
+    private(set) var isTuned = false
+    private(set) var microphoneDenied = false
+    private(set) var microphonePermissionResolved = false
 
-    var frequency: Double? { snapshot.frequency }
-    var cents: Double? { snapshot.cents }
-    var midiNote: Int? { snapshot.midiNote }
-    var confidence: Double { snapshot.confidence }
-    var status: String { snapshot.status }
-    var microphoneDenied: Bool { snapshot.microphoneDenied }
-    @Published private(set) var microphonePermissionResolved = false
-    var isTuned: Bool { snapshot.isTuned }
+    @ObservationIgnored var configuration = TunerConfiguration()
 
-    var configuration = TunerConfiguration()
-
-    private let audioEngine = AVAudioEngine()
-    private let detectorQueue = DispatchQueue(label: "tuner.pitch-detection", qos: .userInitiated)
-    private let analysisGate = AnalysisGate()
-    private let audioWindow = OverlappingAudioWindow()
-    private let pitchPipeline = PitchAnalysisPipeline()
-    private var smoothedMIDINote: Double?
-    private var recentRawNotes: [Double] = []
-    private var pendingJumpMIDINote: Double?
-    private var pendingJumpCount = 0
-    private var learnedNoiseFloor: Double?
-    private var lastObservation = Date.distantPast
-    private var hapticSent = false
-    private var hapticTask: Task<Void, Never>?
-    private let lockHaptic = UIImpactFeedbackGenerator(style: .medium)
-    private var fadeTimer: Timer?
-    private var notificationTokens: [NSObjectProtocol] = []
-    private var isStarting = false
-    private var shouldBeRunning = false
-    private var inputTapInstalled = false
-    private var activeInputNode: AVAudioInputNode?
+    @ObservationIgnored private let audioEngine = AVAudioEngine()
+    // Shared with the audio tap and the detection queue, so they are nonisolated
+    // and kept out of observation: the registrar must not be touched off the
+    // main actor.
+    @ObservationIgnored private nonisolated let detectorQueue = DispatchQueue(
+        label: "tuner.pitch-detection", qos: .userInitiated
+    )
+    @ObservationIgnored private nonisolated let analysisGate = AnalysisGate()
+    @ObservationIgnored private nonisolated let audioWindow = OverlappingAudioWindow()
+    @ObservationIgnored private nonisolated let pitchPipeline = PitchAnalysisPipeline()
+    @ObservationIgnored private var tracker = PitchTracker()
+    @ObservationIgnored private var analysisGeneration = 0
+    #if DEBUG
+    @ObservationIgnored private var lastDiagnosticTime = 0.0
+    @ObservationIgnored private let diagnosticsEnabled = ProcessInfo.processInfo.environment["TUNER_DIAGNOSTICS"] == "1"
+    #endif
+    @ObservationIgnored private var hapticSent = false
+    @ObservationIgnored private var hapticTask: Task<Void, Never>?
+    @ObservationIgnored private let lockHaptic = UIImpactFeedbackGenerator(style: .medium)
+    @ObservationIgnored private var fadeTimer: Timer?
+    @ObservationIgnored private var notificationTokens: [NSObjectProtocol] = []
+    @ObservationIgnored private var isStarting = false
+    @ObservationIgnored private var shouldBeRunning = false
+    @ObservationIgnored private var inputTapInstalled = false
+    @ObservationIgnored private var activeInputNode: AVAudioInputNode?
 
     init() {
         let center = NotificationCenter.default
@@ -172,6 +180,14 @@ final class TunerEngine: ObservableObject {
 
     func start() {
         shouldBeRunning = true
+        #if targetEnvironment(simulator)
+        shouldBeRunning = false
+        // CoreSimulator's inputNode can abort with an audio RPC deadlock even
+        // when AVAudioSession reports an input. Do not initialize simulator I/O.
+        clearReading(status: "Use iPhone for microphone")
+        microphonePermissionResolved = true
+        return
+        #else
         guard !isStarting, !audioEngine.isRunning else { return }
         switch AVAudioApplication.shared.recordPermission {
         case .granted:
@@ -179,7 +195,7 @@ final class TunerEngine: ObservableObject {
             configureAndStartAudio()
             return
         case .denied:
-            snapshot = TunerSnapshot(status: "Microphone is off", microphoneDenied: true)
+            clearReading(status: "Microphone is off", denied: true)
             microphonePermissionResolved = true
             return
         case .undetermined:
@@ -194,19 +210,16 @@ final class TunerEngine: ObservableObject {
                 defer { self.isStarting = false }
                 guard self.shouldBeRunning else { return }
                 if granted { self.configureAndStartAudio() }
-                else {
-                    self.snapshot = TunerSnapshot(
-                        status: "Microphone is off",
-                        microphoneDenied: true
-                    )
-                }
+                else { self.clearReading(status: "Microphone is off", denied: true) }
                 self.microphonePermissionResolved = true
             }
         }
+        #endif
     }
 
     func stop() {
         shouldBeRunning = false
+        analysisGeneration += 1
         fadeTimer?.invalidate()
         hapticTask?.cancel()
         removeInputTapIfNeeded()
@@ -214,13 +227,21 @@ final class TunerEngine: ObservableObject {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
+    /// Applies new settings. Options that only change what is drawn take effect on
+    /// the next frame, and the reading is left alone, so a note being held is not
+    /// interrupted by touching a display preference. Only the reference pitch
+    /// moves the mapping from frequency to note, so only it needs the current
+    /// reading re-expressed — and even then the note itself is unchanged.
     func update(configuration: TunerConfiguration) {
+        guard configuration != self.configuration else { return }
+        let referencePitchChanged = configuration.referencePitch != self.configuration.referencePitch
         self.configuration = configuration
-        smoothedMIDINote = nil
-        learnedNoiseFloor = nil
-        audioWindow.reset()
+        guard referencePitchChanged else { return }
+        tracker.retune(referencePitch: configuration.referencePitch)
+        // The phase refiner's history is expressed against the old reference.
         pitchPipeline.reset()
-        clearReading()
+        hapticTask?.cancel()
+        hapticSent = false
     }
 
     private func configureAndStartAudio() {
@@ -235,32 +256,27 @@ final class TunerEngine: ObservableObject {
                 try? session.setPreferredInput(builtInMicrophone)
             }
 
-            // AVAudioEngine's inputNode accessor can abort the process when the
-            // Simulator or a temporarily changing route has no input device.
-            // Check the session first so that state becomes a recoverable UI
-            // message instead of a SIGABRT.
+            // Validate the device route before constructing its input node.
             guard session.availableInputs?.isEmpty == false else {
-                var next = snapshot
-                next.status = "No microphone available"
-                snapshot = next
+                status = "No microphone available"
                 try? session.setActive(false, options: .notifyOthersOnDeactivation)
                 return
             }
 
+            removeInputTapIfNeeded()
             let input = audioEngine.inputNode
             activeInputNode = input
             let format = input.outputFormat(forBus: 0)
             guard format.sampleRate > 0, format.channelCount > 0 else {
-                var next = snapshot
-                next.status = "No microphone available"
-                snapshot = next
+                status = "No microphone available"
                 try? session.setActive(false, options: .notifyOthersOnDeactivation)
                 return
             }
-            removeInputTapIfNeeded()
             audioWindow.reset()
             pitchPipeline.reset()
-            learnedNoiseFloor = nil
+            clearReading()
+            analysisGeneration += 1
+            let generation = analysisGeneration
             input.installTap(onBus: 0, bufferSize: 1_024, format: format) { [weak self] buffer, _ in
                 guard let self,
                       let data = buffer.floatChannelData?[0],
@@ -269,6 +285,7 @@ final class TunerEngine: ObservableObject {
                         count: Int(buffer.frameLength),
                         gate: self.analysisGate
                       ) else { return }
+                let observationTime = ProcessInfo.processInfo.systemUptime
                 let rate = format.sampleRate
                 self.detectorQueue.async { [weak self] in
                     guard let self else { return }
@@ -279,21 +296,20 @@ final class TunerEngine: ObservableObject {
                     )
                     self.analysisGate.release()
                     Task { @MainActor [weak self] in
-                        self?.consume(result, windowRMS: windowRMS)
+                        guard let self, self.shouldBeRunning,
+                              self.analysisGeneration == generation else { return }
+                        self.consume(result, windowRMS: windowRMS, observationTime: observationTime)
                     }
                 }
             }
             inputTapInstalled = true
             audioEngine.prepare()
             try audioEngine.start()
-            snapshot = TunerSnapshot()
             startFadeTimer()
         } catch {
             removeInputTapIfNeeded()
             audioEngine.stop()
-            var next = snapshot
-            next.status = "Audio unavailable"
-            snapshot = next
+            status = "Audio unavailable"
         }
     }
 
@@ -301,119 +317,39 @@ final class TunerEngine: ObservableObject {
         guard inputTapInstalled else { return }
         activeInputNode?.removeTap(onBus: 0)
         inputTapInstalled = false
+        activeInputNode = nil
     }
 
     
-    private func consume(_ observation: PitchObservation?, windowRMS: Double) {
-        let acquisitionConfidence = 0.43
-        let releaseConfidence = 0.28
-        let releaseDuration = 1.25
-        let now = Date()
-        let rawMIDINote = observation.map {
-            69 + 12 * log2($0.frequency / configuration.referencePitch)
-        }
-        let isContinuingTrackedNote: Bool
-        if let trackedNote = smoothedMIDINote,
-           let rawMIDINote,
-           now.timeIntervalSince(lastObservation) <= releaseDuration {
-            isContinuingTrackedNote = abs(rawMIDINote - trackedNote) <= 1.25
-        } else {
-            isContinuingTrackedNote = false
-        }
-
-        // Learn the room level only from frames that do not resemble a stable
-        // musical pitch. Strong, highly periodic notes can always pass the gate,
-        // which keeps quiet instruments responsive.
-        if !isContinuingTrackedNote,
-           observation == nil || (observation?.confidence ?? 0) <= acquisitionConfidence {
-            if let learnedNoiseFloor {
-                self.learnedNoiseFloor = learnedNoiseFloor * 0.94 + windowRMS * 0.06
-            } else {
-                learnedNoiseFloor = windowRMS
+    private func consume(_ observation: PitchObservation?, windowRMS: Double, observationTime: Double) {
+        #if DEBUG
+        defer {
+            if diagnosticsEnabled, observationTime - lastDiagnosticTime >= 0.5 {
+                print("Tuner tracking: rms=\(windowRMS) rawHz=\(observation?.frequency ?? 0) confidence=\(observation?.confidence ?? 0) displayedHz=\(frequency ?? 0)")
+                lastDiagnosticTime = observationTime
             }
         }
-
-        guard let observation, let rawMIDINote else { return }
-        if isContinuingTrackedNote {
-            let releaseThreshold = max(0.00075, (learnedNoiseFloor ?? 0) * 0.84)
-            guard observation.confidence >= releaseConfidence,
-                  observation.confidence >= 0.58 || observation.amplitude >= releaseThreshold else { return }
-        } else {
-            let acquisitionThreshold = max(0.00095, learnedNoiseFloor ?? 0)
-            guard observation.confidence >= acquisitionConfidence,
-                  observation.confidence >= 0.66 || observation.amplitude >= acquisitionThreshold else { return }
-        }
-        guard let confirmedMIDINote = confirmedJump(rawMIDINote) else { return }
-
-        recentRawNotes.append(confirmedMIDINote)
-        if recentRawNotes.count > 5 { recentRawNotes.removeFirst() }
-        let filterDepth = observation.confidence >= 0.78 ? 3 : 5
-        let filterWindow = recentRawNotes.suffix(filterDepth).sorted()
-        let filteredMIDINote = filterWindow[filterWindow.count / 2]
-
-        // Median filtering rejects single-frame harmonic errors; adaptive smoothing
-        // settles quiet jitter without making genuine movement feel sluggish.
-        if let previous = smoothedMIDINote, abs(filteredMIDINote - previous) < 1.25 {
-            let distance = abs(filteredMIDINote - previous)
-            let response: Double
-            if distance > 0.12 {
-                response = observation.confidence >= 0.78 ? 0.46 : 0.34
-            } else {
-                response = observation.confidence >= 0.78 ? 0.22 : 0.16
-            }
-            smoothedMIDINote = previous + response * (filteredMIDINote - previous)
-        } else {
-            smoothedMIDINote = filteredMIDINote
-        }
-        guard let smoothedMIDINote else { return }
+        #endif
+        guard let observation = tracker.consume(
+            observation, windowRMS: windowRMS, time: observationTime,
+            referencePitch: configuration.referencePitch
+        ), let smoothedMIDINote = tracker.smoothedMIDINote else { return }
 
         let nearestNote = Int(smoothedMIDINote.rounded())
         let deviation = (smoothedMIDINote - Double(nearestNote)) * 100
         let absoluteDeviation = abs(deviation)
         let exitMargin = max(2.0, configuration.tolerance * 0.2)
-        let tuned = snapshot.isTuned
+        let tuned = isTuned
             ? absoluteDeviation <= configuration.tolerance + exitMargin
             : absoluteDeviation <= configuration.tolerance
-        snapshot = TunerSnapshot(
-            frequency: observation.frequency,
-            cents: deviation,
-            midiNote: nearestNote,
-            confidence: observation.confidence,
-            status: tuned ? "In tune" : (deviation > 0 ? "Sharp" : "Flat"),
-            isTuned: tuned
-        )
-        lastObservation = now
+        frequency = configuration.referencePitch * pow(2, (smoothedMIDINote - 69) / 12)
+        cents = deviation
+        midiNote = nearestNote
+        confidence = observation.confidence
+        status = tuned ? "In tune" : (deviation > 0 ? "Sharp" : "Flat")
+        isTuned = tuned
 
         updateHaptics(cents: deviation)
-    }
-
-    private func confirmedJump(_ rawMIDINote: Double) -> Double? {
-        guard let trackedNote = smoothedMIDINote else {
-            pendingJumpMIDINote = nil
-            pendingJumpCount = 0
-            return rawMIDINote
-        }
-
-        guard abs(rawMIDINote - trackedNote) > 2.5 else {
-            pendingJumpMIDINote = nil
-            pendingJumpCount = 0
-            return rawMIDINote
-        }
-
-        if let pendingJumpMIDINote,
-           abs(rawMIDINote - pendingJumpMIDINote) <= 0.35 {
-            pendingJumpCount += 1
-            self.pendingJumpMIDINote = rawMIDINote
-        } else {
-            pendingJumpMIDINote = rawMIDINote
-            pendingJumpCount = 1
-        }
-
-        guard pendingJumpCount >= 2 else { return nil }
-        self.pendingJumpMIDINote = nil
-        pendingJumpCount = 0
-        recentRawNotes.removeAll(keepingCapacity: true)
-        return rawMIDINote
     }
 
     private func updateHaptics(cents: Double) {
@@ -423,7 +359,7 @@ final class TunerEngine: ObservableObject {
             lockHaptic.prepare()
         }
 
-        guard snapshot.isTuned else {
+        guard isTuned else {
             hapticTask?.cancel()
             hapticSent = false
             return
@@ -437,7 +373,7 @@ final class TunerEngine: ObservableObject {
             try? await Task.sleep(for: .milliseconds(90))
             guard let self,
                   !Task.isCancelled,
-                  self.snapshot.isTuned else { return }
+                  self.isTuned else { return }
             self.lockHaptic.impactOccurred(intensity: 0.82)
         }
     }
@@ -447,21 +383,24 @@ final class TunerEngine: ObservableObject {
         fadeTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let now = Date()
-                if now.timeIntervalSince(self.lastObservation) > 1.25 { self.clearReading() }
+                if self.tracker.expire(at: ProcessInfo.processInfo.systemUptime) {
+                    self.clearReading()
+                }
             }
         }
     }
 
-    private func clearReading() {
-        snapshot = TunerSnapshot(
-            status: microphoneDenied ? "Microphone is off" : "Play a note",
-            microphoneDenied: microphoneDenied
-        )
-        smoothedMIDINote = nil
-        recentRawNotes.removeAll(keepingCapacity: true)
-        pendingJumpMIDINote = nil
-        pendingJumpCount = 0
+    /// Clears the reading and publishes a fresh status. Only the audio path calls
+    /// this, so a settings change never costs the user the reading they are on.
+    private func clearReading(status newStatus: String? = nil, denied: Bool = false) {
+        frequency = nil
+        cents = nil
+        midiNote = nil
+        confidence = 0
+        isTuned = false
+        microphoneDenied = denied
+        status = newStatus ?? (denied ? "Microphone is off" : "Play a note")
+        tracker.reset()
         hapticTask?.cancel()
         hapticSent = false
     }
@@ -470,9 +409,7 @@ final class TunerEngine: ObservableObject {
         guard let rawType = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: rawType) else { return }
         if type == .began {
-            var next = snapshot
-            next.status = "Listening paused"
-            snapshot = next
+            status = "Listening paused"
         } else {
             restartForRouteChange()
         }
