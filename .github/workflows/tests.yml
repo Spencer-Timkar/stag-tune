@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: TunerCore tests and app build
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain versions
+        run: |
+          swift --version
+          xcodebuild -version
+
+      # The two recording replay tests skip unless TUNER_RECORDING_PCM points at a
+      # mono 48 kHz Float32 file. No fixture is committed: the only recording is
+      # personal audio that is deliberately kept out of Git.
+      - name: Run TunerCore tests
+        run: swift test
+
+      - name: Build the app for the simulator
+        run: >
+          xcodebuild -project ChromaticTuner.xcodeproj
+          -scheme Chromatic
+          -configuration Debug
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/derived-data"
+          CODE_SIGNING_ALLOWED=NO
+          build

@@ -1,4 +1,8 @@
 title: Stag Tune
 description: Official information and policies for Stag Tune.
 theme: jekyll-theme-minimal
-
+# The detection validation notes are engineering documentation rather than a policy
+# page, and they carry no front matter, so Jekyll would publish them as a raw
+# download. Drop this exclude to publish them as a page instead.
+exclude:
+  - detection-validation.md
