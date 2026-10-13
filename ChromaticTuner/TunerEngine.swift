@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import Observation
+import TunerCore
 import UIKit
 
 private final class AnalysisGate: @unchecked Sendable {
@@ -122,7 +123,6 @@ final class TunerEngine {
     private(set) var frequency: Double?
     private(set) var cents: Double?
     private(set) var midiNote: Int?
-    private(set) var confidence = 0.0
     private(set) var status = "Play a note"
     private(set) var isTuned = false
     private(set) var microphoneDenied = false
@@ -330,10 +330,12 @@ final class TunerEngine {
             }
         }
         #endif
-        guard let observation = tracker.consume(
+        // Only the smoothed note is needed here: the tracker has already applied
+        // the confidence and amplitude gates that decide what reaches the screen.
+        guard tracker.consume(
             observation, windowRMS: windowRMS, time: observationTime,
             referencePitch: configuration.referencePitch
-        ), let smoothedMIDINote = tracker.smoothedMIDINote else { return }
+        ) != nil, let smoothedMIDINote = tracker.smoothedMIDINote else { return }
 
         let nearestNote = Int(smoothedMIDINote.rounded())
         let deviation = (smoothedMIDINote - Double(nearestNote)) * 100
@@ -345,7 +347,6 @@ final class TunerEngine {
         frequency = configuration.referencePitch * pow(2, (smoothedMIDINote - 69) / 12)
         cents = deviation
         midiNote = nearestNote
-        confidence = observation.confidence
         status = tuned ? "In tune" : (deviation > 0 ? "Sharp" : "Flat")
         isTuned = tuned
 
@@ -396,7 +397,6 @@ final class TunerEngine {
         frequency = nil
         cents = nil
         midiNote = nil
-        confidence = 0
         isTuned = false
         microphoneDenied = denied
         status = newStatus ?? (denied ? "Microphone is off" : "Play a note")

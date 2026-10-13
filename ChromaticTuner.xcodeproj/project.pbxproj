@@ -13,12 +13,12 @@
 		A10000000000000000000003 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* SettingsView.swift */; };
 		A10000000000000000000004 /* TunerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* TunerEngine.swift */; };
 		A10000000000000000000005 /* TunerSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* TunerSettings.swift */; };
-		A10000000000000000000006 /* PitchDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* PitchDetector.swift */; };
 		A10000000000000000000007 /* Resources/StagBody-v2.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Resources/StagBody-v2.png */; };
 		A10000000000000000000008 /* Resources/StagMandible-v2.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Resources/StagMandible-v2.png */; };
 		A10000000000000000000009 /* Resources/StagGlow.png in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Resources/StagGlow.png */; };
 		A10000000000000000000010 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* PurchaseManager.swift */; };
 		A10000000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* Assets.xcassets */; };
+		C10000000000000000000001 /* TunerCore in Frameworks */ = {isa = PBXBuildFile; productRef = C20000000000000000000001 /* TunerCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,7 +28,6 @@
 		A20000000000000000000003 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A20000000000000000000004 /* TunerEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunerEngine.swift; sourceTree = "<group>"; };
 		A20000000000000000000005 /* TunerSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunerSettings.swift; sourceTree = "<group>"; };
-		A20000000000000000000006 /* PitchDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PitchDetector.swift; sourceTree = "<group>"; };
 		A20000000000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000008 /* StagTune.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StagTune.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000009 /* Resources/StagBody-v2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Resources/StagBody-v2.png"; sourceTree = "<group>"; };
@@ -44,6 +43,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				09EA3D1E30338CCA00BE2D90 /* StoreKit.framework in Frameworks */,
+				C10000000000000000000001 /* TunerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -62,7 +62,6 @@
 			isa = PBXGroup;
 			children = (
 				A40000000000000000000002 /* ChromaticTuner */,
-				A40000000000000000000003 /* Sources/TunerCore */,
 				09EA3D1C30338CCA00BE2D90 /* Frameworks */,
 				A40000000000000000000004 /* Products */,
 			);
@@ -85,14 +84,6 @@
 			);
 			path = ChromaticTuner;
 			sourceTree = "<group>";
-		};
-		A40000000000000000000003 /* Sources/TunerCore */ = {
-			isa = PBXGroup;
-			children = (
-				A20000000000000000000006 /* PitchDetector.swift */,
-			);
-			path = Sources/TunerCore;
-			sourceTree = SOURCE_ROOT;
 		};
 		A40000000000000000000004 /* Products */ = {
 			isa = PBXGroup;
@@ -118,6 +109,9 @@
 			dependencies = (
 			);
 			name = Chromatic;
+			packageProductDependencies = (
+				C20000000000000000000001 /* TunerCore */,
+			);
 			productName = Chromatic;
 			productReference = A20000000000000000000008 /* StagTune.app */;
 			productType = "com.apple.product-type.application";
@@ -151,6 +145,9 @@
 				Base,
 			);
 			mainGroup = A40000000000000000000001;
+			packageReferences = (
+				C30000000000000000000001 /* XCLocalSwiftPackageReference "." */,
+			);
 			productRefGroup = A40000000000000000000004 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -184,7 +181,6 @@
 				A10000000000000000000003 /* SettingsView.swift in Sources */,
 				A10000000000000000000004 /* TunerEngine.swift in Sources */,
 				A10000000000000000000005 /* TunerSettings.swift in Sources */,
-				A10000000000000000000006 /* PitchDetector.swift in Sources */,
 				A10000000000000000000010 /* PurchaseManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -269,6 +265,20 @@
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C30000000000000000000001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C20000000000000000000001 /* TunerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TunerCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCConfigurationList section */
 		A90000000000000000000001 /* Build configuration list for PBXProject "ChromaticTuner" */ = {
